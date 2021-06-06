@@ -71,21 +71,22 @@ def get_answer_from_context(context, question, model, tokenizer):
 
 def open_domain_qa(query, corpus, vectorizer, model, tokenizer, sp_matrix, k=1):
     # 1. Retrieve k relevant docs by using sparse matrix
-    _, doc_id = get_relevant_doc(vectorizer, query, sp_matrix, k)
-    context = corpus[doc_id.item()]
-
-    # 2. Predict answer from given doc by using MRC model
-    answer = get_answer_from_context(context, query, model, tokenizer)
+    doc_scores, doc_ids = get_relevant_doc(vectorizer, query, sp_matrix, k)
+    
     print("{} {} {}".format('*'*20, 'Result', '*'*20))
     print("[Search query]\n", query, "\n")
-    print(f"[Relevant Doc ID(Top 1 passage)]: {doc_id.item()}")
-    pprint(corpus[doc_id.item()], compact=True)
-    print(f"[Answer Prediction from the model]: {answer}")
+    for idx, doc_id in enumerate(doc_ids):
+    # 2. Predict answer from given doc by using MRC model
+        answer = get_answer_from_context(corpus[doc_id], query, model, tokenizer)
+        print(f"[Relevant Doc ID(Top {idx+1} passage)]: {doc_scores[idx]}")
+        pprint(corpus[doc_id.item()], compact=True)
+        print(f"[Answer Prediction from the model]: {answer}")
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
 
+    parser.add_argument('--topk', default=1, type=int)
     parser.add_argument('--model_name_or_path', default = "/opt/ml/koelectra-korquad/output/checkpoint-7876", type=str, help='Path to pretrained model or model identifier from huggingface.co/models')
     parser.add_argument('--config_name', default = None, type=str, help='Pretrained config name or path if not the same as model_name')
     parser.add_argument('--tokenizer_name', default = None, type=str, help='Pretrained tokenizer name or path if not the same as model_name')
@@ -112,7 +113,7 @@ def main(args):
     query = None
     while query != '그만':
         query = input("Enter any question: ")
-        open_domain_qa(query, corpus, vectorizer, model, tokenizer, sp_matrix)
+        open_domain_qa(query, corpus, vectorizer, model, tokenizer, sp_matrix, k=args.topk)
 
 if __name__ == "__main__":
     args = parse_args()
